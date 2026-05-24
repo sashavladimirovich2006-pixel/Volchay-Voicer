@@ -12,6 +12,20 @@ PresetModel::PresetModel(QObject* parent)
             EffectSettings{}
         },
         {
+            QStringLiteral("Женский голос"),
+            QStringLiteral("Повышенный pitch и formant для более светлого и естественного тембра."),
+            [] {
+                EffectSettings settings;
+                settings.pitchSemitones = 5.0;
+                settings.formantSemitones = 3.5;
+                settings.noiseGateThresholdDb = -54.0;
+                settings.compressorThresholdDb = -16.0;
+                settings.compressorRatio = 2.8;
+                settings.outputGainDb = 1.5;
+                return settings;
+            }()
+        },
+        {
             QStringLiteral("Deep Wolf"),
             QStringLiteral("Lower pitch with preserved formants and soft echo."),
             [] {
