@@ -1,0 +1,83 @@
+name: Windows Portable Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    name: Build Windows x64 portable ZIP
+    runs-on: windows-latest
+    env:
+      VCPKG_ROOT: ${{ runner.temp }}\vcpkg
+      VCPKG_BINARY_SOURCES: clear;x-gha,readwrite
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.8.3"
+          host: windows
+          target: desktop
+          arch: win64_msvc2022_64
+          modules: qtsvg
+          cache: true
+
+      - name: Prepare MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install Ninja
+        shell: powershell
+        run: choco install ninja -y --no-progress
+
+      - name: Bootstrap vcpkg
+        shell: powershell
+        run: |
+          git clone --depth 1 https://github.com/microsoft/vcpkg "$env:VCPKG_ROOT"
+          & "$env:VCPKG_ROOT\bootstrap-vcpkg.bat"
+
+      - name: Configure
+        shell: powershell
+        run: |
+          cmake -S . -B build `
+            -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows
+
+      - name: Build
+        shell: powershell
+        run: cmake --build build --config Release --parallel
+
+      - name: Test
+        shell: powershell
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Package portable build
+        shell: powershell
+        run: |
+          $deployRoot = "build\package"
+          $deployDir = "$deployRoot\VolchayVoicer"
+          New-Item -ItemType Directory -Force -Path $deployDir | Out-Null
+          Copy-Item "build\VolchayVoicer.exe" "$deployDir\VolchayVoicer.exe"
+          windeployqt --release --qmldir "$PWD\qml" --dir "$deployDir" "$deployDir\VolchayVoicer.exe"
+          Copy-Item "$env:VCPKG_ROOT\installed\x64-windows\bin\*.dll" "$deployDir" -ErrorAction SilentlyContinue
+          Copy-Item "README.md" "$deployDir\README.md"
+          Copy-Item "LICENSE" "$deployDir\LICENSE"
+          New-Item -ItemType Directory -Force -Path "$deployDir\logs" | Out-Null
+          Compress-Archive -Path "$deployDir\*" -DestinationPath "$deployRoot\VolchayVoicer-windows-x64-portable.zip" -Force
+
+      - name: Upload portable ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: VolchayVoicer-windows-x64-portable
+          path: build/package/VolchayVoicer-windows-x64-portable.zip
+          if-no-files-found: error

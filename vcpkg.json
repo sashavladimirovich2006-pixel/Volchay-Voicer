@@ -1,0 +1,12 @@
+{
+  "name": "volchay-voicer",
+  "version-string": "0.1.0",
+  "description": "Qt6 QML real-time C++ voice changer.",
+  "license": "GPL-3.0-or-later",
+  "dependencies": [
+    "portaudio",
+    "rubberband",
+    "spdlog"
+  ]
+}
+
