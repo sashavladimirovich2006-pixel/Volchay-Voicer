@@ -14,7 +14,7 @@ jobs:
     name: Build Windows x64 portable ZIP
     runs-on: windows-latest
     env:
-      VCPKG_ROOT: ${{ github.workspace }}\.deps\vcpkg
+      VOLCHAY_VCPKG_ROOT: ${{ github.workspace }}\.deps\vcpkg
       VCPKG_BINARY_SOURCES: clear;x-gha,readwrite
 
     steps:
@@ -41,8 +41,8 @@ jobs:
       - name: Bootstrap vcpkg
         shell: powershell
         run: |
-          git clone --depth 1 https://github.com/microsoft/vcpkg "$env:VCPKG_ROOT"
-          & "$env:VCPKG_ROOT\bootstrap-vcpkg.bat"
+          git clone --depth 1 https://github.com/microsoft/vcpkg "$env:VOLCHAY_VCPKG_ROOT"
+          & "$env:VOLCHAY_VCPKG_ROOT\bootstrap-vcpkg.bat"
 
       - name: Configure
         shell: powershell
@@ -51,7 +51,7 @@ jobs:
             -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
             -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR" `
-            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VOLCHAY_VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
             -DVCPKG_TARGET_TRIPLET=x64-windows
 
       - name: Build
@@ -70,7 +70,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path $deployDir | Out-Null
           Copy-Item "build\VolchayVoicer.exe" "$deployDir\VolchayVoicer.exe"
           windeployqt --release --qmldir "$PWD\qml" --dir "$deployDir" "$deployDir\VolchayVoicer.exe"
-          Copy-Item "$env:VCPKG_ROOT\installed\x64-windows\bin\*.dll" "$deployDir" -ErrorAction SilentlyContinue
+          Copy-Item "$env:VOLCHAY_VCPKG_ROOT\installed\x64-windows\bin\*.dll" "$deployDir" -ErrorAction SilentlyContinue
           Copy-Item "README.md" "$deployDir\README.md"
           Copy-Item "LICENSE" "$deployDir\LICENSE"
           New-Item -ItemType Directory -Force -Path "$deployDir\logs" | Out-Null
