@@ -79,12 +79,17 @@ qt_add_qml_module(VolchayVoicer
     VERSION 1.0
     QML_FILES
         qml/Main.qml
+        qml/ui/DarkButton.qml
+        qml/ui/DarkProgressBar.qml
+        qml/ui/DarkSlider.qml
+        qml/ui/DarkTabButton.qml
     RESOURCES
         assets/icons/activity.svg
         assets/icons/logs.svg
         assets/icons/mic.svg
         assets/icons/power.svg
         assets/icons/preset.svg
+        assets/icons/swap.svg
         assets/icons/warning.svg
         assets/icons/wave.svg
 )

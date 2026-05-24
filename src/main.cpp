@@ -9,6 +9,8 @@
 
 #include <QGuiApplication>
 #include <QCoreApplication>
+#include <QColor>
+#include <QPalette>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
@@ -16,15 +18,43 @@
 
 using namespace volchay;
 
+namespace {
+
+QPalette makeDarkPalette()
+{
+    QPalette palette;
+    palette.setColor(QPalette::Window, QColor("#0b0f14"));
+    palette.setColor(QPalette::WindowText, QColor("#eef4fb"));
+    palette.setColor(QPalette::Base, QColor("#111720"));
+    palette.setColor(QPalette::AlternateBase, QColor("#161d27"));
+    palette.setColor(QPalette::ToolTipBase, QColor("#eef4fb"));
+    palette.setColor(QPalette::ToolTipText, QColor("#0b0f14"));
+    palette.setColor(QPalette::Text, QColor("#dce5ef"));
+    palette.setColor(QPalette::Button, QColor("#171d26"));
+    palette.setColor(QPalette::ButtonText, QColor("#eef4fb"));
+    palette.setColor(QPalette::BrightText, QColor("#ffffff"));
+    palette.setColor(QPalette::Link, QColor("#5aa4ff"));
+    palette.setColor(QPalette::Highlight, QColor("#2fd27f"));
+    palette.setColor(QPalette::HighlightedText, QColor("#08130e"));
+    palette.setColor(QPalette::PlaceholderText, QColor("#7d91a6"));
+    palette.setColor(QPalette::Light, QColor("#2d3947"));
+    palette.setColor(QPalette::Mid, QColor("#212a35"));
+    palette.setColor(QPalette::Dark, QColor("#0f1319"));
+    palette.setColor(QPalette::Shadow, QColor("#05070a"));
+    return palette;
+}
+
+} // namespace
+
 int main(int argc, char* argv[])
 {
+    QQuickStyle::setStyle("Fusion");
     QGuiApplication app(argc, argv);
     app.setApplicationName(AppName);
     app.setApplicationDisplayName(AppName);
     app.setOrganizationName("Volchay");
     app.setOrganizationDomain("volchay.local");
-
-    QQuickStyle::setStyle("Fusion");
+    app.setPalette(makeDarkPalette());
     Logger::initialize();
 
     AudioDeviceModel inputDevices(AudioDeviceModel::Direction::Input);

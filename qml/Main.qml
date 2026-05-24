@@ -10,8 +10,20 @@ ApplicationWindow {
     height: 820
     visible: true
     title: "Volchay Voicer"
-    color: "#111418"
+    color: appBackground
     property int selectedPresetIndex: 0
+    property string activeCompareSlot: "A"
+    property var compareSlotA: ({})
+    property var compareSlotB: ({})
+    property bool compareReady: false
+    property color appBackground: "#0b0f14"
+    property color panelBackground: "#141b24"
+    property color panelBackgroundAlt: "#10161d"
+    property color panelBorder: "#243042"
+    property color accentColor: "#2fd27f"
+    property color accentBlue: "#5a8dff"
+    property color accentCyan: "#57d0ff"
+    property color accentWarning: "#f0b35f"
 
     function formatDb(value) {
         return (Math.round(value * 10) / 10).toFixed(1) + " dB"
@@ -23,6 +35,65 @@ ApplicationWindow {
 
     function formatNumber(value) {
         return Math.round(value * 10) / 10
+    }
+
+    function cloneSettings(map) {
+        return JSON.parse(JSON.stringify(map || {}))
+    }
+
+    function isEmptyMap(map) {
+        return !map || Object.keys(map).length === 0
+    }
+
+    function syncCompareSlotFromLive() {
+        if (!compareReady) {
+            return
+        }
+        const snapshot = cloneSettings(audioController.effectSettings)
+        if (activeCompareSlot === "A") {
+            compareSlotA = snapshot
+        } else {
+            compareSlotB = snapshot
+        }
+    }
+
+    function loadCompareSlot(slot) {
+        const snapshot = slot === "A" ? compareSlotA : compareSlotB
+        if (isEmptyMap(snapshot)) {
+            return
+        }
+        audioController.applyPreset(snapshot)
+    }
+
+    function activateCompareSlot(slot) {
+        if (!compareReady) {
+            activeCompareSlot = slot
+            return
+        }
+        if (slot === activeCompareSlot) {
+            loadCompareSlot(slot)
+            return
+        }
+        syncCompareSlotFromLive()
+        activeCompareSlot = slot
+        loadCompareSlot(slot)
+    }
+
+    function swapCompareSlots() {
+        if (!compareReady) {
+            return
+        }
+        syncCompareSlotFromLive()
+        const oldA = compareSlotA
+        compareSlotA = compareSlotB
+        compareSlotB = oldA
+        activeCompareSlot = activeCompareSlot === "A" ? "B" : "A"
+        loadCompareSlot(activeCompareSlot)
+    }
+
+    function applyPresetToActiveSlot(settings, index) {
+        selectedPresetIndex = index
+        audioController.applyPreset(settings)
     }
 
     function syncDeviceIndexes() {
@@ -59,6 +130,9 @@ ApplicationWindow {
     Connections {
         target: audioController
         function onSettingsChanged() {
+            if (compareReady) {
+                syncCompareSlotFromLive()
+            }
             syncDeviceIndexes()
         }
     }
@@ -87,8 +161,8 @@ ApplicationWindow {
     header: ToolBar {
         height: 76
         background: Rectangle {
-            color: "#0d1014"
-            border.color: "#1f2730"
+            color: root.panelBackgroundAlt
+            border.color: root.panelBorder
         }
         RowLayout {
             anchors.fill: parent
@@ -121,7 +195,7 @@ ApplicationWindow {
             Rectangle {
                 radius: 8
                 color: audioController.running ? "#123726" : "#2b1820"
-                border.color: audioController.running ? "#23b26d" : "#b84c59"
+                border.color: audioController.running ? root.accentColor : "#b84c59"
                 implicitWidth: 116
                 implicitHeight: 36
                 Layout.alignment: Qt.AlignVCenter
@@ -144,9 +218,14 @@ ApplicationWindow {
                 }
             }
 
-            Button {
+            DarkButton {
                 text: audioController.running ? "Stop" : "Start"
                 icon.source: audioController.running ? "qrc:/qt/qml/VolchayVoicer/assets/icons/power.svg" : "qrc:/qt/qml/VolchayVoicer/assets/icons/power.svg"
+                accentColor: audioController.running ? "#d15a68" : root.accentColor
+                surfaceColor: "#151d27"
+                hoverColor: "#1b2430"
+                pressedColor: "#0f141b"
+                borderColor: "#2a3442"
                 onClicked: audioController.toggle()
             }
         }
@@ -165,9 +244,9 @@ ApplicationWindow {
             Rectangle {
                 Layout.preferredWidth: 330
                 Layout.fillHeight: true
-                radius: 8
-                color: "#151a20"
-                border.color: "#232c36"
+                radius: 12
+                color: root.panelBackground
+                border.color: root.panelBorder
 
                 ColumnLayout {
                     anchors.fill: parent
@@ -193,6 +272,57 @@ ApplicationWindow {
                         Item { Layout.fillWidth: true }
                     }
 
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+
+                        Label {
+                            text: "Compare"
+                            color: "#8fa2b7"
+                            font.pixelSize: 12
+                        }
+
+                        Item { Layout.fillWidth: true }
+
+                        DarkButton {
+                            text: "A"
+                            compact: true
+                            checkable: true
+                            checked: root.activeCompareSlot === "A"
+                            accentColor: root.accentBlue
+                            surfaceColor: "#17202b"
+                            hoverColor: "#1b2533"
+                            pressedColor: "#0f141b"
+                            borderColor: "#283548"
+                            onClicked: root.activateCompareSlot("A")
+                        }
+
+                        DarkButton {
+                            text: "B"
+                            compact: true
+                            checkable: true
+                            checked: root.activeCompareSlot === "B"
+                            accentColor: root.accentCyan
+                            surfaceColor: "#17202b"
+                            hoverColor: "#1b2533"
+                            pressedColor: "#0f141b"
+                            borderColor: "#283548"
+                            onClicked: root.activateCompareSlot("B")
+                        }
+
+                        DarkButton {
+                            text: "Swap"
+                            compact: true
+                            icon.source: "qrc:/qt/qml/VolchayVoicer/assets/icons/swap.svg"
+                            accentColor: root.accentWarning
+                            surfaceColor: "#17202b"
+                            hoverColor: "#1b2533"
+                            pressedColor: "#0f141b"
+                            borderColor: "#283548"
+                            onClicked: root.swapCompareSlots()
+                        }
+                    }
+
                     ListView {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
@@ -202,15 +332,14 @@ ApplicationWindow {
                         delegate: Rectangle {
                             width: ListView.view.width
                             height: 72
-                            radius: 8
-                            color: index === root.selectedPresetIndex ? "#1d2330" : "#19202a"
-                            border.color: index === root.selectedPresetIndex ? "#3d5a7a" : "#2a3440"
+                            radius: 10
+                            color: index === root.selectedPresetIndex ? "#1d2532" : "#151b24"
+                            border.color: index === root.selectedPresetIndex ? root.accentBlue : "#283344"
 
                             MouseArea {
                                 anchors.fill: parent
                                 onClicked: {
-                                    audioController.applyPreset(settings)
-                                    root.selectedPresetIndex = index
+                                    root.applyPresetToActiveSlot(settings, index)
                                 }
                             }
 
@@ -243,16 +372,16 @@ ApplicationWindow {
                 spacing: 14
 
                 Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 220
-                    radius: 8
-                    color: "#151a20"
-                    border.color: "#232c36"
+                Layout.fillWidth: true
+                Layout.preferredHeight: 220
+                radius: 12
+                color: root.panelBackground
+                border.color: root.panelBorder
 
-                    ColumnLayout {
-                        anchors.fill: parent
-                        anchors.margins: 14
-                        spacing: 12
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 14
+                    spacing: 12
 
                         RowLayout {
                             Layout.fillWidth: true
@@ -271,8 +400,14 @@ ApplicationWindow {
                                 color: "#e4ebf2"
                             }
                             Item { Layout.fillWidth: true }
-                            Button {
+                            DarkButton {
                                 text: "Refresh"
+                                compact: true
+                                accentColor: root.accentBlue
+                                surfaceColor: "#17202b"
+                                hoverColor: "#1b2533"
+                                pressedColor: "#0f141b"
+                                borderColor: "#283548"
                                 enabled: !audioController.running
                                 onClicked: {
                                     inputDevices.refresh()
@@ -346,9 +481,9 @@ ApplicationWindow {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    radius: 8
-                    color: "#151a20"
-                    border.color: "#232c36"
+                    radius: 12
+                    color: root.panelBackground
+                    border.color: root.panelBorder
 
                     ColumnLayout {
                         anchors.fill: parent
@@ -397,35 +532,22 @@ ApplicationWindow {
                                     { key: "compressorThresholdDb", label: "Comp", from: -30, to: 0, step: 1, defaultValue: -12 }
                                 ]
 
-                                delegate: ColumnLayout {
+                                delegate: DarkSlider {
                                     Layout.fillWidth: true
-                                    spacing: 4
-
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        Label {
-                                            text: modelData.label
-                                            color: "#d9e3eb"
-                                        }
-                                        Item { Layout.fillWidth: true }
-                                        Label {
-                                            text: modelData.key === "robotMix" || modelData.key === "radioMix" || modelData.key === "echoMix"
-                                                ? formatPercent(slider.value)
-                                                : formatNumber(slider.value)
-                                            color: "#8ca0b3"
-                                        }
-                                    }
-                                    Slider {
-                                        id: slider
-                                        Layout.fillWidth: true
-                                        from: modelData.from
-                                        to: modelData.to
-                                        stepSize: modelData.step
-                                        value: audioController.effectSettings[modelData.key] !== undefined
-                                            ? audioController.effectSettings[modelData.key]
-                                            : modelData.defaultValue
-                                        onMoved: audioController.setEffectParameter(modelData.key, value)
-                                    }
+                                    label: modelData.label
+                                    valueText: modelData.key === "robotMix" || modelData.key === "radioMix" || modelData.key === "echoMix"
+                                        ? formatPercent(value)
+                                        : formatNumber(value)
+                                    from: modelData.from
+                                    to: modelData.to
+                                    stepSize: modelData.step
+                                    value: audioController.effectSettings[modelData.key] !== undefined
+                                        ? audioController.effectSettings[modelData.key]
+                                        : modelData.defaultValue
+                                    accentColor: modelData.key === "pitchSemitones" || modelData.key === "formantSemitones"
+                                        ? root.accentBlue
+                                        : root.accentColor
+                                    onMoved: audioController.setEffectParameter(modelData.key, value)
                                 }
                             }
                         }
@@ -437,8 +559,11 @@ ApplicationWindow {
         TabBar {
             id: tabs
             Layout.fillWidth: true
-            TabButton { text: "Diagnostics" }
-            TabButton { text: "Logs" }
+            background: Rectangle {
+                color: "transparent"
+            }
+            DarkTabButton { text: "Diagnostics"; width: tabs.width / 2 }
+            DarkTabButton { text: "Logs"; width: tabs.width / 2 }
         }
 
         StackLayout {
@@ -447,9 +572,9 @@ ApplicationWindow {
             currentIndex: tabs.currentIndex
 
             Rectangle {
-                radius: 8
-                color: "#151a20"
-                border.color: "#232c36"
+                radius: 12
+                color: root.panelBackground
+                border.color: root.panelBorder
 
                 RowLayout {
                     anchors.fill: parent
@@ -460,16 +585,34 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         spacing: 6
                         Label { text: "Input"; color: "#93a4b4" }
-                        ProgressBar { value: audioController.inputLevel; from: 0; to: 1; Layout.fillWidth: true }
+                        DarkProgressBar {
+                            value: audioController.inputLevel
+                            from: 0
+                            to: 1
+                            Layout.fillWidth: true
+                            accentColor: root.accentBlue
+                        }
                         Label { text: "Output"; color: "#93a4b4" }
-                        ProgressBar { value: audioController.outputLevel; from: 0; to: 1; Layout.fillWidth: true }
+                        DarkProgressBar {
+                            value: audioController.outputLevel
+                            from: 0
+                            to: 1
+                            Layout.fillWidth: true
+                            accentColor: root.accentColor
+                        }
                     }
 
                     ColumnLayout {
                         Layout.preferredWidth: 220
                         spacing: 6
                         Label { text: "CPU"; color: "#93a4b4" }
-                        ProgressBar { value: audioController.cpuLoad; from: 0; to: 1; Layout.fillWidth: true }
+                        DarkProgressBar {
+                            value: audioController.cpuLoad
+                            from: 0
+                            to: 1
+                            Layout.fillWidth: true
+                            accentColor: root.accentWarning
+                        }
                         Label {
                             text: "Running: " + (audioController.running ? "yes" : "no")
                             color: "#d9e3eb"
@@ -484,9 +627,9 @@ ApplicationWindow {
             }
 
             Rectangle {
-                radius: 8
-                color: "#151a20"
-                border.color: "#232c36"
+                radius: 12
+                color: root.panelBackground
+                border.color: root.panelBorder
 
                 ColumnLayout {
                     anchors.fill: parent
@@ -518,12 +661,23 @@ ApplicationWindow {
                         readOnly: true
                         wrapMode: TextEdit.NoWrap
                         color: "#dfe6ee"
-                        background: Rectangle { color: "#101419"; radius: 6 }
+                        background: Rectangle {
+                            color: root.panelBackgroundAlt
+                            radius: 8
+                            border.width: 1
+                            border.color: root.panelBorder
+                        }
                     }
                 }
             }
         }
     }
 
-    Component.onCompleted: syncDeviceIndexes()
+    Component.onCompleted: {
+        const snapshot = cloneSettings(audioController.effectSettings)
+        compareSlotA = snapshot
+        compareSlotB = cloneSettings(snapshot)
+        compareReady = true
+        syncDeviceIndexes()
+    }
 }
