@@ -14,7 +14,7 @@ jobs:
     name: Build Windows x64 portable ZIP
     runs-on: windows-latest
     env:
-      VCPKG_ROOT: ${{ runner.temp }}\vcpkg
+      VCPKG_ROOT: ${{ github.workspace }}\.deps\vcpkg
       VCPKG_BINARY_SOURCES: clear;x-gha,readwrite
 
     steps:
@@ -50,6 +50,7 @@ jobs:
           cmake -S . -B build `
             -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR" `
             -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
             -DVCPKG_TARGET_TRIPLET=x64-windows
 
